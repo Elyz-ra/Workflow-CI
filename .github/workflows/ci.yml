@@ -25,49 +25,42 @@ jobs:
         auto-activate-base: false
         activate-environment: false
 
-    - name: Initialize Conda properly
+    - name: Proper Conda Initialization
+      shell: bash -l {0}  # Critical: Use login shell
       run: |
-        eval "$(conda shell.bash hook)"
         conda init bash
         source ~/.bashrc
 
-    - name: Check Environment
-      run: |
-        conda info
-        conda list
-
-    - name: Create Conda environment
+    - name: Create and activate environment
+      shell: bash -l {0}  # Critical: Use login shell
       run: |
         conda env create -f MLProjects/conda.yaml
         conda activate mlflow-env
         conda list
 
-    - name: Install additional dependencies
+    - name: Verify environment
+      shell: bash -l {0}
       run: |
-        eval "$(conda shell.bash hook)"
-        conda activate mlflow-env
-        pip install docker
+        conda info
+        which python
+        python -c "import mlflow; print(mlflow.__version__)"
 
-    - name: Set MLflow Tracking URI
+    - name: Debug Conda
+      shell: bash -l {0}
       run: |
-        export MLFLOW_TRACKING_URI=./mlruns
-        echo "MLFLOW_TRACKING_URI set to $MLFLOW_TRACKING_URI"
+        echo "CONDA_PREFIX: $CONDA_PREFIX"
+        echo "PATH: $PATH"
+        conda env list
 
     - name: Run MLflow project
+      shell: bash -l {0}
       run: |
-        eval "$(conda shell.bash hook)"
         conda activate mlflow-env
         mlflow run MLProjects -P data_folder=ecommerce_shipping_data_preprocessed
 
-    - name: Upload MLflow artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: mlflow-model-artifact
-        path: mlruns/
-
     - name: Build Docker Model
+      shell: bash -l {0}
       run: |
-        eval "$(conda shell.bash hook)"
         conda activate mlflow-env
         latest_run=$(ls -t mlruns/0 | head -n 1)
         mlflow models build-docker -m "mlruns/0/$latest_run/artifacts/model" -n "shipping-delay"
@@ -81,16 +74,8 @@ jobs:
         docker push ${{ secrets.DOCKER_USERNAME }}/shipping-delay:latest
 
     - name: Cleanup
-      run: |
-        docker logout
-        conda deactivate
+      run: docker logout
       if: always()
 
     - name: Complete job
       run: echo "✅ CI/CD workflow complete!"
-
-    - name: Debug Conda environment
-      run: |
-        conda env list
-        conda list
-        which python
