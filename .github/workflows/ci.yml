@@ -31,8 +31,11 @@ jobs:
     - name: Set MLflow Tracking URI
       run: echo "MLFLOW_TRACKING_URI=http://127.0.0.1:5001" >> $GITHUB_ENV
 
-    - name: Run MLflow Project
-      run: mlflow run MLProjects -P data_folder=ecommerce_shipping_data_preprocessed
+    - name: Run MLflow project
+      run: |
+        export MLFLOW_TRACKING_URI=local
+        mlflow run MLProjects -P data_folder=ecommerce_shipping_data_preprocessed
+
 
     - name: Install Python dependencies (for Docker)
       run: pip install docker mlflow
