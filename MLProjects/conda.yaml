@@ -1,4 +1,4 @@
-name: shipping_delay_env
+name: mlflow-env
 channels:
 - conda-forge
 dependencies:
@@ -13,4 +13,4 @@ dependencies:
   - scikit-learn==1.6.1
   - scipy==1.13.1
   - xgboost==1.6.2
-name: mlflow-env
+
