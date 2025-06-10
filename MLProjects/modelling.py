@@ -37,3 +37,6 @@ with mlflow.start_run():
     acc = accuracy_score(y_test, preds)
 
     print(f"Akurasi: {acc}")
+
+    # Simpan model ke direktori lokal
+    mlflow.sklearn.log_model(model, "model")

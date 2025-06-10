@@ -33,7 +33,13 @@ jobs:
       run: echo "MLFLOW_TRACKING_URI=http://127.0.0.1:5001" >> $GITHUB_ENV
 
     - name: Run MLflow Project
-      run: mlflow run . -P data_folder=ecommerce_shipping_data_preprocessed
+      run: mlflow run MLProjects -P data_folder=ecommerce_shipping_data_preprocessed
+
+    - name: Find latest MLflow model path
+      id: find_model
+      run: |
+        MODEL_DIR=$(find mlruns -type d -name "model" | sort | tail -n 1)
+        echo "MODEL_PATH=$MODEL_DIR" >> $GITHUB_ENV
 
     - name: Save artifact
       run: |
@@ -52,7 +58,7 @@ jobs:
         pip install docker mlflow==2.22.1
 
     - name: Build Docker Image
-      run: mlflow models build-docker -m ./MLProject
+      run: mlflow models build-docker -m $MODEL_PATH
 
     - name: Login to Docker Hub
       run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
