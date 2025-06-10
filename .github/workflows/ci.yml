@@ -16,24 +16,36 @@ jobs:
     - name: Checkout repo
       uses: actions/checkout@v3
 
-    - name: Set up Python 3.12.7
-      uses: actions/setup-python@v4
+   
+    - name: Set up Miniconda with Python 3.12.7
+      uses: conda-incubator/setup-miniconda@v3 
       with:
         python-version: "3.12.7"
+        miniconda-version: "latest" 
+        activate-environment: false 
+        auto-update-conda: true
+        auto-activate-base: false 
 
-    - name: Check Env
-      run: python --version
+    - name: Check Env (Python and Conda)
+      run: |
+        python --version
+        conda --version
+        # Cek apakah 'activate' tersedia
+        type activate || echo "Activate command not found or not in PATH"
 
     - name: Install dependencies
       run: |
-        pip install mlflow pandas scikit-learn # dagshub tidak perlu jika tidak melacak ke DagsHub
+        # Instal MLflow CLI secara global agar 'mlflow run' bisa dieksekusi
+        pip install mlflow
+        # Dependensi proyek (pandas, scikit-learn) akan diurus oleh conda.yaml via mlflow run
+        # dagshub tidak perlu diinstal jika tidak terintegrasi dengan DagsHub
 
     - name: Set MLflow Tracking URI to Local
-      run: echo "MLFLOW_TRACKING_URI=./mlruns" >> $GITHUB_ENV 
+      run: export MLFLOW_TRACKING_URI=./mlruns
 
     - name: Run MLflow project
       run: |
-        mlflow run MLProjects --no-conda -P data_folder=ecommerce_shipping_data_preprocessed
+        mlflow run MLProjects -P data_folder=ecommerce_shipping_data_preprocessed
 
     - name: Install Docker dependency
       run: pip install docker
@@ -42,7 +54,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: mlflow-model-artifact
-        path: mlruns/
+        path: mlruns/ 
 
     - name: Build Docker Model
       run: |
@@ -62,8 +74,8 @@ jobs:
       run: echo "🧼 Logged out from Docker Hub"
       if: always()
 
-    - name: Post set up Python 3.12.7
-      run: echo "🧹 Python teardown complete"
+    - name: Post set up Miniconda
+      run: echo "🧹 Miniconda teardown complete"
       if: always()
 
     - name: Post Run actions/checkout@v3
