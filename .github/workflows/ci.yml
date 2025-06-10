@@ -34,6 +34,7 @@ jobs:
         conda env remove -n mlflow-env || true
         conda env create -f MLProjects/conda.yaml
         conda activate mlflow-env
+        pip install setuptools<81  # Fix xgboost warning
         python -c "import mlflow; print(f'MLflow version: {mlflow.__version__}')"
 
     - name: Run MLflow project
