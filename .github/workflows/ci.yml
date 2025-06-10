@@ -8,6 +8,9 @@ on:
 jobs:
   mlflow-ci:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
 
     steps:
     - name: Checkout repository
@@ -22,41 +25,30 @@ jobs:
         auto-activate-base: false
 
     - name: Initialize Conda
-      shell: bash -l {0}
       run: |
         conda init bash
         source ~/.bashrc
 
     - name: Create Conda environment
-      shell: bash -l {0}
       run: |
-        # Hapus environment jika sudah ada
         conda env remove -n mlflow-env || true
-        
-        # Buat environment baru
-        conda env create -f $GITHUB_WORKSPACE/MLProjects/conda.yaml
-        
-        # Aktifkan dan verifikasi
+        conda env create -f MLProjects/conda.yaml
         conda activate mlflow-env
-        conda list
         python -c "import mlflow; print(f'MLflow version: {mlflow.__version__}')"
 
     - name: Run MLflow project
-      shell: bash -l {0}
       run: |
         conda activate mlflow-env
-        export MLFLOW_TRACKING_URI=./mlruns
-        mlflow run MLProjects -P data_folder=ecommerce_shipping_data_preprocessed --verbose
+        export MLFLOW_TRACKING_URI=file://$GITHUB_WORKSPACE/mlruns
+        mlflow run MLProjects -P data_folder=ecommerce_shipping_data_preprocessed
 
     - name: Build Docker image
-      shell: bash -l {0}
       run: |
         conda activate mlflow-env
         latest_run=$(ls -t mlruns/0 | head -n 1)
         mlflow models build-docker -m "mlruns/0/$latest_run/artifacts/model" -n "shipping-delay"
 
     - name: Push to Docker Hub
-      shell: bash -l {0}
       run: |
         echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
         docker tag shipping-delay:latest ${{ secrets.DOCKER_USERNAME }}/shipping-delay:latest
