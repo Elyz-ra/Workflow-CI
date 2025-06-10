@@ -1,4 +1,4 @@
-name: MLflow CI/CD Pipeline
+name: MLflow CI/CD
 
 on:
   push:
@@ -71,8 +71,9 @@ jobs:
         docker push ${{ secrets.DOCKER_USERNAME }}/shipping-delay:latest
         docker logout
 
-    - name: Upload Artifacts
-      uses: actions/upload-artifact@v3
+    - name: Upload artifacts
+      if: always()
+      uses: actions/upload-artifact@v4
       with:
         name: mlflow-artifacts
         path: mlruns/
