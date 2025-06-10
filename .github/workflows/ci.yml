@@ -10,72 +10,67 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Set up job
-      run: echo "🚀 Starting MLflow CI/CD..."
-
-    - name: Checkout repo
+    - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Set up Miniconda
+    - name: Setup Miniconda
       uses: conda-incubator/setup-miniconda@v3
       with:
-        python-version: "3.12.7"
         miniconda-version: "latest"
+        python-version: "3.12" 
         auto-update-conda: true
         auto-activate-base: false
-        activate-environment: false
 
-    - name: Proper Conda Initialization
-      shell: bash -l {0}  # Critical: Use login shell
+    - name: Initialize Conda
+      shell: bash -l {0}
       run: |
         conda init bash
         source ~/.bashrc
 
-    - name: Create and activate environment
-      shell: bash -l {0}  # Critical: Use login shell
+    - name: Create environment from conda.yaml
+      shell: bash -l {0}
       run: |
-        conda env create -f MLProjects/conda.yaml
+        conda env create -f MLProjects/conda.yaml --force
         conda activate mlflow-env
         conda list
 
     - name: Verify environment
       shell: bash -l {0}
       run: |
-        conda info
+        conda activate mlflow-env
+        python -c "import mlflow, xgboost; print(f'MLflow:{mlflow.__version__}, XGBoost:{xgboost.__version__}')"
         which python
-        python -c "import mlflow; print(mlflow.__version__)"
-
-    - name: Debug Conda
-      shell: bash -l {0}
-      run: |
-        echo "CONDA_PREFIX: $CONDA_PREFIX"
-        echo "PATH: $PATH"
-        conda env list
 
     - name: Run MLflow project
       shell: bash -l {0}
       run: |
         conda activate mlflow-env
-        mlflow run MLProjects -P data_folder=ecommerce_shipping_data_preprocessed
+        export MLFLOW_TRACKING_URI=./mlruns
+        mlflow run MLProjects -P data_folder=ecommerce_shipping_data_preprocessed --verbose
 
-    - name: Build Docker Model
+    - name: Prepare Docker artifacts
+      shell: bash -l {0}
+      run: |
+        conda activate mlflow-env
+        latest_run=$(ls -t mlruns/0 | head -n 1)
+        echo "Latest run ID: $latest_run"
+        ls -la "mlruns/0/$latest_run/artifacts/model"
+
+    - name: Build and push Docker image
       shell: bash -l {0}
       run: |
         conda activate mlflow-env
         latest_run=$(ls -t mlruns/0 | head -n 1)
         mlflow models build-docker -m "mlruns/0/$latest_run/artifacts/model" -n "shipping-delay"
-
-    - name: Login to Docker Hub
-      run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-
-    - name: Tag and Push Docker Image
-      run: |
+        
+        echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
         docker tag shipping-delay:latest ${{ secrets.DOCKER_USERNAME }}/shipping-delay:latest
         docker push ${{ secrets.DOCKER_USERNAME }}/shipping-delay:latest
+        docker logout
 
-    - name: Cleanup
-      run: docker logout
+    - name: Upload MLflow artifacts
       if: always()
-
-    - name: Complete job
-      run: echo "✅ CI/CD workflow complete!"
+      uses: actions/upload-artifact@v4
+      with:
+        name: mlflow-artifacts
+        path: mlruns/
