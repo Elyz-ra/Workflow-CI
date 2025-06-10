@@ -26,7 +26,6 @@ jobs:
 
     - name: Install dependencies
       run: |
-        # Instal semua dependensi Python yang diperlukan untuk menjalankan proyek dan MLflow
         pip install mlflow pandas scikit-learn # dagshub tidak perlu jika tidak melacak ke DagsHub
 
     - name: Set MLflow Tracking URI to Local
@@ -34,8 +33,6 @@ jobs:
 
     - name: Run MLflow project
       run: |
-        # Perintah ini sekarang akan melacak secara lokal (ke ./mlruns).
-        # Flag '--no-conda' tetap diperlukan jika kamu menggunakan Conda environment.
         mlflow run MLProjects --no-conda -P data_folder=ecommerce_shipping_data_preprocessed
 
     - name: Install Docker dependency
