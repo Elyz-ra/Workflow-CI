@@ -1,7 +1,5 @@
 name: shipping_delay
 conda_env: conda.yaml
-environment:
-  env_manager: local
 entry_points:
   main:
     parameters:

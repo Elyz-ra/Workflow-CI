@@ -16,7 +16,7 @@ jobs:
     - name: Checkout repo
       uses: actions/checkout@v3
 
-    - name: Set up Miniconda with Python 3.12.7 and initialize shell
+    - name: Set up Miniconda
       uses: conda-incubator/setup-miniconda@v3
       with:
         python-version: "3.12.7"
@@ -25,32 +25,40 @@ jobs:
         auto-activate-base: false
         activate-environment: false
 
-    - name: Initialize Conda for current shell
+    - name: Initialize Conda
       run: |
-        source /usr/share/miniconda/etc/profile.d/conda.sh
-        # CONDA_BASE=$(conda info --base)
-        # source "$CONDA_BASE/etc/profile.d/conda.sh"
-        # echo "Conda activated base environment."
+        source $CONDA/bin/activate
+        conda init bash
+        source ~/.bashrc
 
-    - name: Check Env (Python and Conda)
+    - name: Check Environment
       run: |
         python --version
         conda --version
-        type activate && echo "Activate command found!" || echo "Activate command NOT found!"
+        conda info
 
-    - name: Install dependencies
-      run: pip install mlflow pandas scikit-learn xgboost
+    - name: Create Conda environment
+      run: |
+        conda env create -f MLProjects/conda.yaml
+        conda activate mlflow-env
+        conda list
 
-    - name: Set MLflow Tracking URI to Local
-      run: export MLFLOW_TRACKING_URI=./mlruns
+    - name: Install additional dependencies
+      run: |
+        conda activate mlflow-env
+        pip install docker
+
+    - name: Set MLflow Tracking URI
+      run: |
+        export MLFLOW_TRACKING_URI=./mlruns
+        echo "MLFLOW_TRACKING_URI set to $MLFLOW_TRACKING_URI"
 
     - name: Run MLflow project
-      run: mlflow run MLProjects -P data_folder=ecommerce_shipping_data_preprocessed
+      run: |
+        conda activate mlflow-env
+        mlflow run MLProjects -P data_folder=ecommerce_shipping_data_preprocessed
 
-    - name: Install Docker dependency
-      run: pip install docker
-
-    - name: Upload MLflow artifacts (local mlruns folder)
+    - name: Upload MLflow artifacts
       uses: actions/upload-artifact@v4
       with:
         name: mlflow-model-artifact
@@ -59,27 +67,20 @@ jobs:
     - name: Build Docker Model
       run: |
         latest_run=$(ls -t mlruns/0 | head -n 1)
-        mlflow models build-docker -m mlruns/0/$latest_run/artifacts/model -n shipping-delay
+        mlflow models build-docker -m "mlruns/0/$latest_run/artifacts/model" -n "shipping-delay"
 
-    - name: Log in to Docker Hub
+    - name: Login to Docker Hub
       run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-    - name: Tag Docker Image
-      run: docker tag shipping-delay:latest ${{ secrets.DOCKER_USERNAME }}/shipping-delay:latest
+    - name: Tag and Push Docker Image
+      run: |
+        docker tag shipping-delay:latest ${{ secrets.DOCKER_USERNAME }}/shipping-delay:latest
+        docker push ${{ secrets.DOCKER_USERNAME }}/shipping-delay:latest
 
-    - name: Push Docker Image
-      run: docker push ${{ secrets.DOCKER_USERNAME }}/shipping-delay:latest
-
-    - name: Post Log in to Docker Hub
-      run: echo "🧼 Logged out from Docker Hub"
-      if: always()
-
-    - name: Post set up Miniconda
-      run: echo "🧹 Miniconda teardown complete"
-      if: always()
-
-    - name: Post Run actions/checkout@v3
-      run: echo "🧽 Repo checkout done"
+    - name: Cleanup
+      run: |
+        echo "🧹 Cleaning up..."
+        docker logout
       if: always()
 
     - name: Complete job

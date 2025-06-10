@@ -17,7 +17,7 @@ y_train = pd.read_csv(f"{args.data_folder}/y_train.csv").values.ravel()
 y_test = pd.read_csv(f"{args.data_folder}/y_test.csv").values.ravel()
 
 # Tracking MLflow lokal
-mlflow.set_tracking_uri("http://127.0.0.1:5001")  # bisa diubah ke env var / remote jika skilled
+mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", "http://127.0.0.1:5001"))
 mlflow.set_experiment("Shipping Delay Prediction")
 
 with mlflow.start_run():
