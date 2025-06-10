@@ -26,21 +26,22 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install mlflow pandas scikit-learn
+        # Instal semua dependensi Python yang diperlukan untuk menjalankan proyek dan MLflow
+        pip install mlflow pandas scikit-learn # dagshub tidak perlu jika tidak melacak ke DagsHub
 
-    - name: Set MLflow Tracking URI
-      run: echo "MLFLOW_TRACKING_URI=http://127.0.0.1:5001" >> $GITHUB_ENV
+    - name: Set MLflow Tracking URI to Local
+      run: echo "MLFLOW_TRACKING_URI=./mlruns" >> $GITHUB_ENV 
 
     - name: Run MLflow project
       run: |
-        export MLFLOW_TRACKING_URI=local
-        mlflow run MLProjects -P data_folder=ecommerce_shipping_data_preprocessed
+        # Perintah ini sekarang akan melacak secara lokal (ke ./mlruns).
+        # Flag '--no-conda' tetap diperlukan jika kamu menggunakan Conda environment.
+        mlflow run MLProjects --no-conda -P data_folder=ecommerce_shipping_data_preprocessed
 
+    - name: Install Docker dependency
+      run: pip install docker
 
-    - name: Install Python dependencies (for Docker)
-      run: pip install docker mlflow
-
-    - name: Upload to GitHub (simulasi Google Drive)
+    - name: Upload MLflow artifacts (local mlruns folder)
       uses: actions/upload-artifact@v4
       with:
         name: mlflow-model-artifact
