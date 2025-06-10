@@ -1,9 +1,9 @@
 name: shipping_delay
-
 conda_env: conda.yaml
-
+environment:
+  env_manager: local
 entry_points:
   main:
     parameters:
       data_folder: {type: str}
-    command: "conda run --no-capture-output python modelling.py --data_folder {data_folder}"
+    command: "python modelling.py --data_folder {data_folder}"
