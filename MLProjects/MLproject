@@ -6,4 +6,4 @@ entry_points:
   main:
     parameters:
       data_folder: {type: str}
-    command: "python modelling.py --data_folder {data_folder}"
+    command: "conda run --no-capture-output python modelling.py --data_folder {data_folder}"
