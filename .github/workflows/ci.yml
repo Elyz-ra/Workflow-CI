@@ -2,8 +2,7 @@ name: MLflow CI/CD Advance
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -17,17 +16,17 @@ jobs:
     - name: Checkout repo
       uses: actions/checkout@v3
 
-    - name: Set up Python 3.12
+    - name: Set up Python 3.12.7
       uses: actions/setup-python@v4
       with:
         python-version: "3.12.7"
 
-    - name: Check environment
+    - name: Check Env
       run: python --version
 
     - name: Install dependencies
       run: |
-        pip install mlflow==2.22.1
+        pip install mlflow pandas scikit-learn
 
     - name: Set MLflow Tracking URI
       run: echo "MLFLOW_TRACKING_URI=http://127.0.0.1:5001" >> $GITHUB_ENV
@@ -35,39 +34,40 @@ jobs:
     - name: Run MLflow Project
       run: mlflow run MLProjects -P data_folder=ecommerce_shipping_data_preprocessed
 
-    - name: Find latest MLflow model path
-      id: find_model
-      run: |
-        MODEL_DIR=$(find mlruns -type d -name "model" | sort | tail -n 1)
-        echo "MODEL_PATH=$MODEL_DIR" >> $GITHUB_ENV
+    - name: Install Python dependencies (for Docker)
+      run: pip install docker mlflow
 
-    - name: Save artifact
-      run: |
-        mkdir -p output
-        echo "Simulasi artifact hasil training model" > output/info.txt
-      # Simulasi upload, ganti dengan upload real model jika mau
-
-    - name: Upload artifact ke GitHub
+    - name: Upload to GitHub (simulasi Google Drive)
       uses: actions/upload-artifact@v4
       with:
         name: mlflow-model-artifact
-        path: output/
+        path: mlruns/
 
-    - name: Install dependencies for Docker
+    - name: Build Docker Model
       run: |
-        pip install docker mlflow==2.22.1
+        latest_run=$(ls -t mlruns/0 | head -n 1)
+        mlflow models build-docker -m mlruns/0/$latest_run/artifacts/model -n shipping-delay
 
-    - name: Build Docker Image
-      run: mlflow models build-docker -m $MODEL_PATH
-
-    - name: Login to Docker Hub
+    - name: Log in to Docker Hub
       run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
     - name: Tag Docker Image
-      run: docker tag mlflow-model:latest ${{ secrets.DOCKER_USERNAME }}/shipping-delay:latest
+      run: docker tag shipping-delay:latest ${{ secrets.DOCKER_USERNAME }}/shipping-delay:latest
 
     - name: Push Docker Image
       run: docker push ${{ secrets.DOCKER_USERNAME }}/shipping-delay:latest
+
+    - name: Post Log in to Docker Hub
+      run: echo "🧼 Logged out from Docker Hub"
+      if: always()
+
+    - name: Post set up Python 3.12.7
+      run: echo "🧹 Python teardown complete"
+      if: always()
+
+    - name: Post Run actions/checkout@v3
+      run: echo "🧽 Repo checkout done"
+      if: always()
 
     - name: Complete job
       run: echo "✅ CI/CD workflow complete!"

@@ -1,11 +1,9 @@
-name: shipping_delay_prediction
+name: shipping_delay
 
 conda_env: conda.yaml
-docker_env:
-  image: elra09/shipping-delay:latest
 
 entry_points:
   main:
     parameters:
-      data_folder: {type: str, default: "ecommerce_shipping_data_preprocessed"}
+      data_folder: {type: str}
     command: "python modelling.py --data_folder {data_folder}"
