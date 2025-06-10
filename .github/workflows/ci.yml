@@ -1,0 +1,67 @@
+name: MLflow CI/CD Advance
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  mlflow-ci:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Set up job
+      run: echo "🚀 Starting MLflow CI/CD..."
+
+    - name: Checkout repo
+      uses: actions/checkout@v3
+
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.12.7"
+
+    - name: Check environment
+      run: python --version
+
+    - name: Install dependencies
+      run: |
+        pip install mlflow==2.22.1
+
+    - name: Set MLflow Tracking URI
+      run: echo "MLFLOW_TRACKING_URI=http://127.0.0.1:5001" >> $GITHUB_ENV
+
+    - name: Run MLflow Project
+      run: mlflow run ./MLProject -P data_folder=ecommerce_shipping_data_preprocessed
+
+    - name: Save artifact
+      run: |
+        mkdir -p output
+        echo "Simulasi artifact hasil training model" > output/info.txt
+      # Simulasi upload, ganti dengan upload real model jika mau
+
+    - name: Upload artifact ke GitHub
+      uses: actions/upload-artifact@v4
+      with:
+        name: mlflow-model-artifact
+        path: output/
+
+    - name: Install dependencies for Docker
+      run: |
+        pip install docker mlflow==2.22.1
+
+    - name: Build Docker Image
+      run: mlflow models build-docker -m ./MLProject
+
+    - name: Login to Docker Hub
+      run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+    - name: Tag Docker Image
+      run: docker tag mlflow-model:latest ${{ secrets.DOCKER_USERNAME }}/shipping-delay:latest
+
+    - name: Push Docker Image
+      run: docker push ${{ secrets.DOCKER_USERNAME }}/shipping-delay:latest
+
+    - name: Complete job
+      run: echo "✅ CI/CD workflow complete!"
